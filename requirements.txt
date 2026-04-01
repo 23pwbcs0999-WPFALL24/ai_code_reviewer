@@ -1,0 +1,28 @@
+# ─── Web Framework ───────────────────────────────────────────────────────────
+streamlit>=1.35.0
+
+# ─── Static Analysis ─────────────────────────────────────────────────────────
+pylint>=3.2.0
+flake8>=7.0.0
+pyflakes>=3.2.0
+bandit>=1.7.9
+pycodestyle>=2.11.0
+
+# ─── Data Validation ─────────────────────────────────────────────────────────
+pydantic>=2.7.0
+
+# ─── LLM API Clients ─────────────────────────────────────────────────────────
+google-generativeai>=0.7.0      # Gemini
+groq>=0.9.0                      # Groq (Llama, Mixtral — free & fast)
+openai>=1.35.0                   # OpenAI (optional)
+
+# ─── Utilities ───────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.32.0
+
+# ─── Report Generation ───────────────────────────────────────────────────────
+jinja2>=3.1.4                    # HTML report templating
+
+# ─── Optional: Lightweight Embeddings (for future context-aware review) ──────
+# sentence-transformers>=3.0.0  # Uncomment if you want local embeddings
+# faiss-cpu>=1.8.0              # Uncomment for vector search
