@@ -120,7 +120,11 @@ Respond with ONLY this JSON structure (no other text):
       "line": <integer or null>,
       "title": "Short title",
       "description": "Plain English explanation of the problem",
-      "suggestion": "How to fix it in one or two sentences"
+      "suggestion": "How to fix it in one or two sentences",
+      "evidence": {
+        "function": "Function/class name where issue appears, or null",
+        "snippet": "Exact risky code snippet from the provided code"
+      }
     }
   ],
   "improved_code": "The complete improved version of the code (JSON-safe string with escaped newlines as \\n and escaped quotes)",
@@ -167,7 +171,7 @@ JSON format:
   "score": <0-100>,
   "static_issue_review": [{"status": "correct_issue|false_positive|partially_correct|uncertain", "line": null, "title": "...", "severity": "high|medium|low|info", "reason": "...", "fix": "..."}],
   "missed_issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
-  "issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
+  "issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "...", "evidence": {"function": null, "snippet": "..."}}],
   "improved_code": "improved version here (JSON-safe escaped string)",
   "recommendations": ["tip 1", "tip 2"]
 }

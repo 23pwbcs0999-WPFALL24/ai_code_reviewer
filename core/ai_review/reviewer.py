@@ -126,14 +126,25 @@ def _parse_llm_response(raw: str) -> AIReviewResult:
         line_val = item.get("line")
         line = int(line_val) if line_val and str(line_val).isdigit() else None
 
-        issues.append(Issue(
+        evidence = item.get("evidence", {}) if isinstance(item.get("evidence", {}), dict) else {}
+        evidence_function = str(evidence.get("function", "")).strip()
+        evidence_snippet = str(evidence.get("snippet", "")).strip()
+
+        candidate = Issue(
             category=IssueCategory.AI,
             severity=severity,
             line=line,
             title=str(item.get("title", "Issue found by AI"))[:120],
             description=str(item.get("description", "")),
             suggestion=str(item.get("suggestion", "")) or None,
-        ))
+            code_snippet=evidence_snippet or None,
+        )
+
+        # Filter out generic claims without concrete evidence from the code.
+        if _is_generic_claim(candidate) and not (evidence_snippet or line or evidence_function):
+            continue
+
+        issues.append(candidate)
 
     # Parse static-issue classification review.
     # We project these into regular Issue cards so UI can render them directly.
@@ -201,9 +212,9 @@ def _parse_llm_response(raw: str) -> AIReviewResult:
     seen: set[tuple[str, int | None, str]] = set()
     for issue in issues:
         key = (
-            issue.title.strip().lower(),
+            _normalize_issue_title(issue.title),
             issue.line,
-            issue.description.strip().lower(),
+            _normalize_issue_text(issue.description),
         )
         if key in seen:
             continue
@@ -363,6 +374,38 @@ def _parse_severity(sev_str: str) -> Severity:
         "info":     Severity.INFO,
     }
     return mapping.get(sev_str.lower(), Severity.MEDIUM)
+
+
+def _is_generic_claim(issue: Issue) -> bool:
+    """Identify broad claims that should require concrete evidence."""
+    text = f"{issue.title} {issue.description}".lower()
+    generic_markers = [
+        "lack of input validation",
+        "missing input validation",
+        "security issue",
+        "possible vulnerability",
+        "could lead to",
+    ]
+    return any(marker in text for marker in generic_markers)
+
+
+def _normalize_issue_title(title: str) -> str:
+    """Normalize titles so near-duplicates collapse to one entry."""
+    t = title.lower().strip()
+    t = re.sub(r"^\[(correct issue|false positive|partially correct|uncertain|missed by static)\]\s*", "", t)
+    t = re.sub(r"\s+", " ", t)
+    alias_map = {
+        "hardcoded secret key": "hardcoded secret",
+        "hardcoded password": "hardcoded secret",
+        "sql injection risk": "sql injection",
+    }
+    return alias_map.get(t, t)
+
+
+def _normalize_issue_text(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"\s+", " ", text)
+    return text
 
 
 # ─── Fallback Mode ────────────────────────────────────────────────────────────
