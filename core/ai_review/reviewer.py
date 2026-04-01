@@ -148,12 +148,16 @@ def _parse_llm_response(raw: str) -> AIReviewResult:
         label = status_map.get(status, "Partially Correct")
 
         title_text = str(item.get("title", "Static finding review")).strip()
-        # Guardrail: models sometimes echo the prompt helper text as a fake issue.
-        if title_text.lower() in {
+        title_norm = title_text.lower().strip()
+        # Guardrail: models sometimes echo helper text as a fake issue card.
+        if title_norm in {
             "no issues found by static analysis tools",
+            "no static analysis issues found",
             "no issues found",
             "static analysis found no issues",
         }:
+            continue
+        if ("static analysis" in title_norm and "no" in title_norm and "issue" in title_norm):
             continue
 
         sev_str = str(item.get("severity", "info")).lower()
