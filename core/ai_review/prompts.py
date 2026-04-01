@@ -25,6 +25,9 @@ Rules you MUST follow:
 6. Be accurate — if you're not sure about something, say so.
 7. Distinguish true issues from false positives.
 8. Prefer secure and production-safe fixes over quick hacks.
+9. Do NOT invent vulnerabilities that are not visible in the code.
+10. Only report an issue when the exact risky pattern is present in the given code.
+11. If a security claim depends on missing context, classify it as "uncertain".
 """
 
 
@@ -37,7 +40,7 @@ Static analysis tools have already found these issues:
 $static_issues_summary
 
 Your job is to:
-1. Classify each static-analysis issue as one of: correct_issue, false_positive, partially_correct
+1. Classify each static-analysis issue as one of: correct_issue, false_positive, partially_correct, uncertain
 2. Explain each issue in simple words (1-2 sentences per issue)
 3. Identify real issues MISSED by static tools (logic bugs, security flaws, bad error handling, input validation gaps, algorithm inefficiencies)
 4. Write the full IMPROVED version of the code with all problems fixed
@@ -51,6 +54,37 @@ Your job is to:
   - Input validation and type checks
   - Performance improvements where possible
   - Python best practices and PEP 8 style
+8. For SQL injection classification, use this rule:
+  - correct_issue: untrusted input is interpolated/concatenated and query is executed
+  - partially_correct: unsafe query string is built but execution context is not shown
+  - false_positive: query uses proper parameterized placeholders/bound parameters
+  - uncertain: query handling cannot be verified from the provided snippet
+
+Security checks you MUST consider:
+  - Hardcoded secrets or API keys
+  - Unsafe eval() or exec()
+  - Unsafe pickle.loads()/pickle.load() or yaml.load() with unsafe loader
+  - SQL query string concatenation/interpolation
+  - Path traversal risks in file reads/writes
+  - Insecure randomness for security tokens
+  - Missing input validation
+  - Missing exception handling
+
+Also check for performance issues such as:
+  - O(n^2) loops that can be optimized
+  - Inefficient list/string concatenation in loops
+  - Repeated expensive operations
+  - Unnecessary memory allocations
+
+Line-number rule:
+  - When possible, return the exact line number.
+  - If unsure, return null.
+
+Deduplication rule:
+  - Do not repeat the same finding across static_issue_review, missed_issues, and issues.
+
+Reasoning rule:
+  - Internally reason through the code step-by-step before finalizing JSON.
 
 CODE TO REVIEW:
 ```$language_lower
@@ -63,7 +97,7 @@ Respond with ONLY this JSON structure (no other text):
   "score": <integer 0-100>,
   "static_issue_review": [
     {
-      "status": "correct_issue|false_positive|partially_correct",
+      "status": "correct_issue|false_positive|partially_correct|uncertain",
       "line": <integer or null>,
       "title": "Original issue title",
       "severity": "critical|high|medium|low|info",
@@ -98,11 +132,22 @@ Respond with ONLY this JSON structure (no other text):
 }
 
 Scoring guide:
-  90-100: Near-perfect code, very few issues
+  100:   No correctness, security, validation, reliability, or style issues found
+  90-99: Near-perfect code, very few minor issues
   75-89:  Good code with minor issues
   60-74:  Acceptable but has multiple issues that need fixing
   40-59:  Has significant problems that affect correctness or security
   0-39:   Serious issues — may not work correctly, has security flaws
+
+Score consistency rules:
+  - If issues + missed_issues are both empty, set score to exactly 100.
+  - Do not assign 100 when any critical/high issue exists.
+
+Score deductions:
+  - Critical issue: -25
+  - High issue: -15
+  - Medium issue: -8
+  - Low issue: -3
 """)
 
 
@@ -120,7 +165,7 @@ JSON format:
 {
   "summary": "Brief summary",
   "score": <0-100>,
-  "static_issue_review": [{"status": "correct_issue|false_positive|partially_correct", "line": null, "title": "...", "severity": "high|medium|low|info", "reason": "...", "fix": "..."}],
+  "static_issue_review": [{"status": "correct_issue|false_positive|partially_correct|uncertain", "line": null, "title": "...", "severity": "high|medium|low|info", "reason": "...", "fix": "..."}],
   "missed_issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
   "issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
   "improved_code": "improved version here (JSON-safe escaped string)",
@@ -142,9 +187,10 @@ def format_static_issues_for_prompt(issues: list) -> str:
 
     lines = []
     for issue in issues[:20]:   # Cap at 20 to avoid prompt bloat
+        severity = getattr(issue.severity, "value", issue.severity)
         line_ref = f"line {issue.line}" if issue.line else "location unknown"
         lines.append(
-            f"  - [{issue.severity.value.upper()}] {issue.title} ({line_ref})"
+            f"  - [{str(severity).upper()}] {issue.title} ({line_ref})"
         )
 
     if len(issues) > 20:

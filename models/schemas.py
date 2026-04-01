@@ -120,6 +120,11 @@ class ReviewResult(BaseModel):
         self.low_count      = sum(1 for i in all_issues if i.severity == Severity.LOW)
         self.info_count     = sum(1 for i in all_issues if i.severity == Severity.INFO)
 
+        # Perfect score when no issues are present across static + AI results.
+        if self.total_issues == 0:
+            self.final_score = 100
+            return
+
         # Use AI score if available, otherwise compute from static issues
         if self.ai.ai_available and self.ai.score > 0:
             self.final_score = self.ai.score
