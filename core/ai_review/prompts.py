@@ -23,6 +23,8 @@ Rules you MUST follow:
 4. Be specific — reference actual line numbers and variable names from the code.
 5. Format your entire response as valid JSON (no markdown, no extra text).
 6. Be accurate — if you're not sure about something, say so.
+7. Distinguish true issues from false positives.
+8. Prefer secure and production-safe fixes over quick hacks.
 """
 
 
@@ -35,11 +37,20 @@ Static analysis tools have already found these issues:
 $static_issues_summary
 
 Your job is to:
-1. Look deeper and find any issues the static tools may have MISSED (logic bugs, bad algorithm choices, missing error handling, security risks, etc.)
+1. Classify each static-analysis issue as one of: correct_issue, false_positive, partially_correct
 2. Explain each issue in simple words (1-2 sentences per issue)
-3. Write the full IMPROVED version of the code with all problems fixed
-4. Give an overall quality score from 0 to 100
-5. Give 3-5 practical recommendations
+3. Identify real issues MISSED by static tools (logic bugs, security flaws, bad error handling, input validation gaps, algorithm inefficiencies)
+4. Write the full IMPROVED version of the code with all problems fixed
+5. Give an overall quality score from 0 to 100
+6. Give 3-7 practical recommendations
+7. Ensure fixes include:
+  - Secure authentication patterns
+  - Proper exception handling
+  - Safe file handling (with open + context manager + validation)
+  - No eval/exec for untrusted input
+  - Input validation and type checks
+  - Performance improvements where possible
+  - Python best practices and PEP 8 style
 
 CODE TO REVIEW:
 ```$language_lower
@@ -50,6 +61,25 @@ Respond with ONLY this JSON structure (no other text):
 {
   "summary": "2-3 sentence plain-English summary of the code and its main problems",
   "score": <integer 0-100>,
+  "static_issue_review": [
+    {
+      "status": "correct_issue|false_positive|partially_correct",
+      "line": <integer or null>,
+      "title": "Original issue title",
+      "severity": "critical|high|medium|low|info",
+      "reason": "Why this classification is correct",
+      "fix": "Correct and secure fix"
+    }
+  ],
+  "missed_issues": [
+    {
+      "severity": "critical|high|medium|low|info",
+      "line": <integer or null>,
+      "title": "Missed issue title",
+      "description": "What was missed and why it matters",
+      "suggestion": "Correct and secure fix"
+    }
+  ],
   "issues": [
     {
       "severity": "<critical|high|medium|low|info>",
@@ -90,6 +120,8 @@ JSON format:
 {
   "summary": "Brief summary",
   "score": <0-100>,
+  "static_issue_review": [{"status": "correct_issue|false_positive|partially_correct", "line": null, "title": "...", "severity": "high|medium|low|info", "reason": "...", "fix": "..."}],
+  "missed_issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
   "issues": [{"severity": "high|medium|low", "line": null, "title": "...", "description": "...", "suggestion": "..."}],
   "improved_code": "improved version here (JSON-safe escaped string)",
   "recommendations": ["tip 1", "tip 2"]
